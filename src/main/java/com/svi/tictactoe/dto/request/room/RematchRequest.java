@@ -1,4 +1,10 @@
 package com.svi.tictactoe.dto.request.room;
 
-public class RematchRequest {
+import jakarta.validation.constraints.NotNull;
+import java.util.UUID;
+
+public record RematchRequest(
+        @NotNull
+        UUID playerId
+        ) {
 }

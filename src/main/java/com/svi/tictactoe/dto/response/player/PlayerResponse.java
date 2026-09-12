@@ -1,4 +1,13 @@
 package com.svi.tictactoe.dto.response.player;
 
-public class PlayerResponse {
+import java.util.UUID;
+
+public record PlayerResponse(
+        UUID playerId,
+        String name,
+        int wins,
+        int losses,
+        int draws,
+        int gamesPlayed
+        ) {
 }

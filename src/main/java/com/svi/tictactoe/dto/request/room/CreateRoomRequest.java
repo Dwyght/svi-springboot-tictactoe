@@ -1,4 +1,10 @@
 package com.svi.tictactoe.dto.request.room;
 
-public class CreateRoomRequest {
+import jakarta.validation.constraints.NotNull;
+import java.util.UUID;
+
+public record CreateRoomRequest(
+        @NotNull
+        UUID ownerPlayerId
+        ) {
 }
