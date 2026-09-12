@@ -1,4 +1,6 @@
 package com.svi.tictactoe.enums;
 
-public class GameStatus {
+public enum GameStatus {
+    IN_PROGRESS,
+    FINISHED
 }

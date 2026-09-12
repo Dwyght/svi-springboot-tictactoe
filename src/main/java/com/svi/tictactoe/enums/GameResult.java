@@ -1,4 +1,7 @@
 package com.svi.tictactoe.enums;
 
-public class GameResult {
+public enum GameResult {
+    WIN,
+    DRAW,
+    FORFEIT
 }

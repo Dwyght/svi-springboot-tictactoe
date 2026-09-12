@@ -1,4 +1,8 @@
 package com.svi.tictactoe.enums;
 
-public class RoomStatus {
+public enum RoomStatus {
+    WAITING,
+    IN_GAME,
+    GAME_FINISHED,
+    CLOSED
 }
