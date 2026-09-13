@@ -6,6 +6,7 @@ import com.svi.tictactoe.domain.Room;
 import com.svi.tictactoe.dto.request.room.CreateRoomRequest;
 import com.svi.tictactoe.dto.request.room.JoinRoomRequest;
 import com.svi.tictactoe.dto.request.room.LeaveRoomRequest;
+import com.svi.tictactoe.dto.request.room.RematchRequest;
 import com.svi.tictactoe.dto.response.room.RoomResponse;
 import com.svi.tictactoe.entity.ActiveRoomEntity;
 import com.svi.tictactoe.entity.GameEntity;
@@ -141,17 +142,38 @@ public class RoomServiceImpl implements RoomService {
         return roomMapper.toResponse(savedRoom);
     }
 
+    @Override
+    public RoomResponse requestRematch(String roomCode, RematchRequest request) {
+        UUID playerId = request.playerId();
+        RoomEntity entity = findRoomEntity(roomCode);
+        Room room = roomPersistenceMapper.toDomain(entity);
+        validateRematch(room, playerId);
+
+        Game game = new Game(
+                UUID.randomUUID(),
+                room.getRoomCode(),
+                room.getOwnerPlayerId(),
+                room.getGuestPlayerId()
+        );
+
+        gameRepository.save(gamePersistenceMapper.toEntity(game));
+        room.setCurrentGameId(game.getGameId());
+        room.setStatus(RoomStatus.IN_GAME);
+        room.setUpdatedAt(Instant.now());
+        RoomEntity savedEntity = roomRepository.save(roomPersistenceMapper.toEntity(room));
+        Room savedRoom = roomPersistenceMapper.toDomain(savedEntity);
+        return roomMapper.toResponse(savedRoom);
+    }
+
     private void validatePlayerExists(UUID playerId) {
         if (!playerRepository.existsById(playerId)) {
-            throw new ResourceNotFoundException(ErrorMessage.PLAYER_NOT_FOUND.format(playerId)
-            );
+            throw new ResourceNotFoundException(ErrorMessage.PLAYER_NOT_FOUND.format(playerId));
         }
     }
 
     private void validatePlayerHasNoActiveRoom(UUID playerId) {
         if (activeRoomRepository.existsById(playerId)) {
-            throw new IllegalGameStateException(ErrorMessage.PLAYER_ALREADY_IN_ACTIVE_ROOM.format(playerId)
-            );
+            throw new IllegalGameStateException(ErrorMessage.PLAYER_ALREADY_IN_ACTIVE_ROOM.format(playerId));
         }
     }
 
@@ -204,6 +226,15 @@ public class RoomServiceImpl implements RoomService {
         activeRoomRepository.deleteById(room.getOwnerPlayerId());
         if (room.getGuestPlayerId() != null) {
             activeRoomRepository.deleteById(room.getGuestPlayerId());
+        }
+    }
+
+    private void validateRematch(Room room, UUID playerId) {
+        if (!room.getOwnerPlayerId().equals(playerId)) {
+            throw new IllegalGameStateException(ErrorMessage.ONLY_ROOM_OWNER_CAN_REMATCH.getMessage());
+        }
+        if (room.getStatus() != RoomStatus.GAME_FINISHED || room.getGuestPlayerId() == null || room.getCurrentGameId() == null) {
+            throw new IllegalGameStateException(ErrorMessage.REMATCH_NOT_AVAILABLE.format(room.getRoomCode()));
         }
     }
 }

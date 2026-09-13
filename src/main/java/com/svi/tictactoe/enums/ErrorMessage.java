@@ -14,7 +14,9 @@ public enum ErrorMessage {
     PLAYER_NOT_IN_GAME("Player with ID %s is not part of game %s."),
     NOT_PLAYER_TURN("It is not player %s's turn."),
     PLAYER_NOT_IN_ROOM("Player with ID %s is not part of room %s."),
-    ROOM_ALREADY_CLOSED("Room %s is already closed.");
+    ROOM_ALREADY_CLOSED("Room %s is already closed."),
+    ONLY_ROOM_OWNER_CAN_REMATCH("Only the room owner can request a rematch."),
+    REMATCH_NOT_AVAILABLE("Room %s is not ready for a rematch.");
 
     private final String message;
 
