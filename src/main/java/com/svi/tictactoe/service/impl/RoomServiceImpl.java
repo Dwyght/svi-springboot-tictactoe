@@ -5,8 +5,7 @@ import com.svi.tictactoe.domain.Game;
 import com.svi.tictactoe.domain.Room;
 import com.svi.tictactoe.dto.request.room.CreateRoomRequest;
 import com.svi.tictactoe.dto.request.room.JoinRoomRequest;
-import com.svi.tictactoe.dto.request.room.LeaveRoomRequest;
-import com.svi.tictactoe.dto.request.room.RematchRequest;
+import com.svi.tictactoe.dto.request.game.CreateRematchGameRequest;
 import com.svi.tictactoe.dto.response.room.RoomResponse;
 import com.svi.tictactoe.entity.ActiveRoomEntity;
 import com.svi.tictactoe.entity.GameEntity;
@@ -123,8 +122,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public RoomResponse leaveRoom(String roomCode, LeaveRoomRequest request) {
-        UUID playerId = request.playerId();
+    public RoomResponse leaveRoom(String roomCode, UUID playerId) {
         RoomEntity entity = findRoomEntity(roomCode);
         Room room = roomPersistenceMapper.toDomain(entity);
         validatePlayerInRoom(room, playerId);
@@ -143,7 +141,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public RoomResponse requestRematch(String roomCode, RematchRequest request) {
+    public RoomResponse createRematchGame(String roomCode, CreateRematchGameRequest request) {
         UUID playerId = request.playerId();
         RoomEntity entity = findRoomEntity(roomCode);
         Room room = roomPersistenceMapper.toDomain(entity);

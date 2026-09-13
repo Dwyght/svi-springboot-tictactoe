@@ -2,15 +2,16 @@ package com.svi.tictactoe.service;
 
 import com.svi.tictactoe.dto.request.room.CreateRoomRequest;
 import com.svi.tictactoe.dto.request.room.JoinRoomRequest;
-import com.svi.tictactoe.dto.request.room.RematchRequest;
+import com.svi.tictactoe.dto.request.game.CreateRematchGameRequest;
 import com.svi.tictactoe.dto.response.room.RoomResponse;
-import com.svi.tictactoe.dto.request.room.LeaveRoomRequest;
+
+import java.util.UUID;
 
 public interface RoomService {
 
     RoomResponse createRoom(CreateRoomRequest request);
     RoomResponse getRoom(String roomCode);
     RoomResponse joinRoom(String roomCode, JoinRoomRequest request);
-    RoomResponse leaveRoom(String roomCode, LeaveRoomRequest request);
-    RoomResponse requestRematch(String roomCode, RematchRequest request);
+    RoomResponse leaveRoom(String roomCode, UUID playerId);
+    RoomResponse createRematchGame(String roomCode, CreateRematchGameRequest request);
 }
