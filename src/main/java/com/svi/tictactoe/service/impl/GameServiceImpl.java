@@ -56,7 +56,7 @@ public class GameServiceImpl implements GameService {
             GamePersistenceMapper gamePersistenceMapper,
             PlayerPersistenceMapper playerPersistenceMapper,
             RoomPersistenceMapper roomPersistenceMapper,
-
+            LeaderboardService leaderboardService
     ) {
         this.gameRepository = gameRepository;
         this.playerRepository = playerRepository;
@@ -66,6 +66,7 @@ public class GameServiceImpl implements GameService {
         this.gamePersistenceMapper = gamePersistenceMapper;
         this.playerPersistenceMapper = playerPersistenceMapper;
         this.roomPersistenceMapper = roomPersistenceMapper;
+        this.leaderboardService = leaderboardService;
     }
 
     @Override
@@ -79,6 +80,21 @@ public class GameServiceImpl implements GameService {
         Object lock = gameLocks.computeIfAbsent(gameId, ignored -> new Object());
         synchronized (lock) {
             return processMove(gameId, request);
+        }
+    }
+
+    @Override
+    public void forfeitGame(UUID gameId, UUID forfeitingPlayerId) {
+        Object lock = gameLocks.computeIfAbsent(gameId, ignored -> new Object());
+        synchronized (lock) {
+            Game game = findGame(gameId);
+            if (game.getStatus() != GameStatus.IN_PROGRESS) {
+                return;
+            }
+            getPlayerSymbol(game, forfeitingPlayerId);
+            UUID winnerId = game.getPlayerXId().equals(forfeitingPlayerId) ? game.getPlayerOId() : game.getPlayerXId();
+            finishWithForfeit(game, winnerId);
+            gameRepository.save(gamePersistenceMapper.toEntity(game));
         }
     }
 
@@ -206,5 +222,15 @@ public class GameServiceImpl implements GameService {
         room.setStatus(RoomStatus.GAME_FINISHED);
         room.setUpdatedAt(Instant.now());
         roomRepository.save(roomPersistenceMapper.toEntity(room));
+    }
+
+    private void finishWithForfeit(Game game, UUID winnerId) {
+        game.setStatus(GameStatus.FINISHED);
+        game.setResult(GameResult.FORFEIT);
+        game.setWinnerId(winnerId);
+        game.setNextTurn(null);
+        game.setUpdatedAt(Instant.now());
+        game.setEndedAt(Instant.now());
+        updateWinLossStatistics(game, winnerId);
     }
 }

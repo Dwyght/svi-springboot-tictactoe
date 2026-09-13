@@ -5,6 +5,7 @@ import com.svi.tictactoe.domain.Game;
 import com.svi.tictactoe.domain.Room;
 import com.svi.tictactoe.dto.request.room.CreateRoomRequest;
 import com.svi.tictactoe.dto.request.room.JoinRoomRequest;
+import com.svi.tictactoe.dto.request.room.LeaveRoomRequest;
 import com.svi.tictactoe.dto.response.room.RoomResponse;
 import com.svi.tictactoe.entity.ActiveRoomEntity;
 import com.svi.tictactoe.entity.GameEntity;
@@ -20,7 +21,9 @@ import com.svi.tictactoe.repository.ActiveRoomRepository;
 import com.svi.tictactoe.repository.GameRepository;
 import com.svi.tictactoe.repository.PlayerRepository;
 import com.svi.tictactoe.repository.RoomRepository;
+import com.svi.tictactoe.service.GameService;
 import com.svi.tictactoe.service.RoomService;
+
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -38,6 +41,7 @@ public class RoomServiceImpl implements RoomService {
     private final RoomMapper roomMapper;
     private final RoomPersistenceMapper roomPersistenceMapper;
     private final GamePersistenceMapper gamePersistenceMapper;
+    private final GameService gameService;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -48,7 +52,8 @@ public class RoomServiceImpl implements RoomService {
             ActiveRoomRepository activeRoomRepository,
             RoomMapper roomMapper,
             RoomPersistenceMapper roomPersistenceMapper,
-            GamePersistenceMapper gamePersistenceMapper
+            GamePersistenceMapper gamePersistenceMapper,
+            GameService gameService
     ) {
         this.roomRepository = roomRepository;
         this.playerRepository = playerRepository;
@@ -57,6 +62,7 @@ public class RoomServiceImpl implements RoomService {
         this.roomMapper = roomMapper;
         this.roomPersistenceMapper = roomPersistenceMapper;
         this.gamePersistenceMapper = gamePersistenceMapper;
+        this.gameService = gameService;
     }
 
     @Override
@@ -115,6 +121,26 @@ public class RoomServiceImpl implements RoomService {
         return roomMapper.toResponse(savedRoom);
     }
 
+    @Override
+    public RoomResponse leaveRoom(String roomCode, LeaveRoomRequest request) {
+        UUID playerId = request.playerId();
+        RoomEntity entity = findRoomEntity(roomCode);
+        Room room = roomPersistenceMapper.toDomain(entity);
+        validatePlayerInRoom(room, playerId);
+        validateRoomNotClosed(room);
+
+        if (room.getStatus() == RoomStatus.IN_GAME) {
+            gameService.forfeitGame(room.getCurrentGameId(), playerId);
+        }
+
+        room.setStatus(RoomStatus.CLOSED);
+        room.setUpdatedAt(Instant.now());
+        RoomEntity savedEntity = roomRepository.save(roomPersistenceMapper.toEntity(room));
+        removePlayersFromActiveRoom(room);
+        Room savedRoom = roomPersistenceMapper.toDomain(savedEntity);
+        return roomMapper.toResponse(savedRoom);
+    }
+
     private void validatePlayerExists(UUID playerId) {
         if (!playerRepository.existsById(playerId)) {
             throw new ResourceNotFoundException(ErrorMessage.PLAYER_NOT_FOUND.format(playerId)
@@ -159,5 +185,25 @@ public class RoomServiceImpl implements RoomService {
             roomCode.append(GameConstants.ROOM_CODE_CHARACTERS.charAt(characterIndex));
         }
         return roomCode.toString();
+    }
+
+    private void validatePlayerInRoom(Room room, UUID playerId) {
+        boolean isOwner = room.getOwnerPlayerId().equals(playerId);
+        boolean isGuest = room.getGuestPlayerId() != null && room.getGuestPlayerId().equals(playerId);
+        if (!isOwner && !isGuest) {
+            throw new IllegalGameStateException(ErrorMessage.PLAYER_NOT_IN_ROOM.format(playerId, room.getRoomCode()));
+        }
+    }
+
+    private void validateRoomNotClosed(Room room) {
+        if (room.getStatus() == RoomStatus.CLOSED) {
+            throw new IllegalGameStateException(ErrorMessage.ROOM_ALREADY_CLOSED.format(room.getRoomCode()));
+        }
+    }
+    private void removePlayersFromActiveRoom(Room room) {
+        activeRoomRepository.deleteById(room.getOwnerPlayerId());
+        if (room.getGuestPlayerId() != null) {
+            activeRoomRepository.deleteById(room.getGuestPlayerId());
+        }
     }
 }

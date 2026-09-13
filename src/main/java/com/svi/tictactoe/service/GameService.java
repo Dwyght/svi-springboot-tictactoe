@@ -9,4 +9,5 @@ public interface GameService {
 
     GameResponse getGame(UUID gameId);
     GameResponse makeMove(UUID gameId, MakeMoveRequest request);
+    void forfeitGame(UUID gameId, UUID forfeitingPlayerId);
 }
