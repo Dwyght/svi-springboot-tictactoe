@@ -1,4 +1,8 @@
 package com.svi.tictactoe.event;
 
-public class RoomChangedEvent {
+import com.svi.tictactoe.dto.response.room.RoomResponse;
+
+public record RoomChangedEvent(
+        RoomResponse room
+) {
 }

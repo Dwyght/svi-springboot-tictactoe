@@ -1,4 +1,8 @@
 package com.svi.tictactoe.event;
 
-public class LeaderboardChangedEvent {
+import com.svi.tictactoe.dto.response.leaderboard.LeaderboardResponse;
+
+public record LeaderboardChangedEvent(
+        LeaderboardResponse leaderboard
+) {
 }

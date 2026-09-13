@@ -1,4 +1,8 @@
 package com.svi.tictactoe.event;
 
-public class GameChangedEvent {
+import com.svi.tictactoe.dto.response.game.GameResponse;
+
+public record GameChangedEvent(
+        GameResponse game
+) {
 }
