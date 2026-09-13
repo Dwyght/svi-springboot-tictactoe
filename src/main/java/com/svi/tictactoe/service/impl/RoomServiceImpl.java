@@ -41,7 +41,15 @@ public class RoomServiceImpl implements RoomService {
 
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public RoomServiceImpl(RoomRepository roomRepository, PlayerRepository playerRepository, GameRepository gameRepository, ActiveRoomRepository activeRoomRepository, RoomMapper roomMapper, RoomPersistenceMapper roomPersistenceMapper, GamePersistenceMapper gamePersistenceMapper) {
+    public RoomServiceImpl(
+            RoomRepository roomRepository,
+            PlayerRepository playerRepository,
+            GameRepository gameRepository,
+            ActiveRoomRepository activeRoomRepository,
+            RoomMapper roomMapper,
+            RoomPersistenceMapper roomPersistenceMapper,
+            GamePersistenceMapper gamePersistenceMapper
+    ) {
         this.roomRepository = roomRepository;
         this.playerRepository = playerRepository;
         this.gameRepository = gameRepository;

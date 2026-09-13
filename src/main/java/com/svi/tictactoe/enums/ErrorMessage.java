@@ -8,7 +8,11 @@ public enum ErrorMessage {
     ROOM_NOT_FOUND("Room with code %s was not found."),
     PLAYER_ALREADY_IN_ACTIVE_ROOM("Player with ID %s is already in an active room."),
     PLAYER_CANNOT_JOIN_OWN_ROOM("The room owner cannot join as the guest."),
-    ROOM_NOT_AVAILABLE("Room %s is not available for joining.");
+    ROOM_NOT_AVAILABLE("Room %s is not available for joining."),
+    GAME_NOT_FOUND("Game with ID %s was not found."),
+    GAME_NOT_IN_PROGRESS("Game with ID %s is not in progress."),
+    PLAYER_NOT_IN_GAME("Player with ID %s is not part of game %s."),
+    NOT_PLAYER_TURN("It is not player %s's turn.");
 
     private final String message;
 
