@@ -10,12 +10,14 @@ public record MakeMoveRequest(
         @NotNull
         UUID playerId,
 
+        @NotNull
         @Min(0)
         @Max(GameConstants.BOARD_SIZE - 1)
-        int row,
+        Integer row,
 
+        @NotNull
         @Min(0)
         @Max(GameConstants.BOARD_SIZE - 1)
-        int column
+        Integer column
         ) {
 }

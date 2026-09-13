@@ -43,7 +43,7 @@ public class RoomController {
     }
 
     @PostMapping("/{roomCode}/games")
-    public ResponseEntity<RoomResponse> createGame(@PathVariable String roomCode, @Valid @RequestBody CreateRematchGameRequest request) {
+    public ResponseEntity<RoomResponse> createRematchGame(@PathVariable String roomCode, @Valid @RequestBody CreateRematchGameRequest request) {
         return ResponseEntity.ok(roomService.createRematchGame(roomCode, request));
     }
 }
