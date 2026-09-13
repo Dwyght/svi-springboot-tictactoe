@@ -1,4 +1,4 @@
-package com.svi.tictactoe.entity;
+package com.svi.tictactoe.domain;
 
 import com.svi.tictactoe.constant.GameConstants;
 import com.svi.tictactoe.enums.CellValue;

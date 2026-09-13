@@ -1,7 +1,7 @@
 package com.svi.tictactoe.mapper;
 
 import com.svi.tictactoe.dto.response.room.RoomResponse;
-import com.svi.tictactoe.entity.Room;
+import com.svi.tictactoe.domain.Room;
 import org.springframework.stereotype.Component;
 
 @Component

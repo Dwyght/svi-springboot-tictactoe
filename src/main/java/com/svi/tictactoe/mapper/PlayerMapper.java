@@ -2,7 +2,7 @@ package com.svi.tictactoe.mapper;
 
 import com.svi.tictactoe.dto.request.player.CreatePlayerRequest;
 import com.svi.tictactoe.dto.response.player.PlayerResponse;
-import com.svi.tictactoe.entity.Player;
+import com.svi.tictactoe.domain.Player;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -10,7 +10,7 @@ import java.util.UUID;
 @Component
 public class PlayerMapper {
 
-    public Player toEntity(CreatePlayerRequest request, UUID playerId) {
+    public Player toDomain(CreatePlayerRequest request, UUID playerId) {
         return new Player(playerId, request.name());
     }
 

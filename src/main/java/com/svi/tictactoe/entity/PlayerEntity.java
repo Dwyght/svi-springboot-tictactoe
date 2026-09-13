@@ -1,22 +1,33 @@
 package com.svi.tictactoe.entity;
 
+import org.springframework.data.cassandra.core.mapping.Column;
+import org.springframework.data.cassandra.core.mapping.PrimaryKey;
+import org.springframework.data.cassandra.core.mapping.Table;
+
 import java.util.UUID;
 
-public class Player {
+@Table("players_by_id")
+public class PlayerEntity {
 
+    @PrimaryKey("player_id")
     private UUID playerId;
+
+    @Column("name")
     private String name;
+
+    @Column("wins")
     private int wins;
+
+    @Column("losses")
     private int losses;
+
+    @Column("draws")
     private int draws;
+
+    @Column("games_played")
     private int gamesPlayed;
 
-    public Player() {
-    }
-
-    public Player(UUID payerId, String name) {
-        this.playerId = payerId;
-        this.name = name;
+    public PlayerEntity() {
     }
 
     public UUID getPlayerId() {

@@ -1,7 +1,7 @@
 package com.svi.tictactoe.mapper;
 
 import com.svi.tictactoe.dto.response.game.GameResponse;
-import com.svi.tictactoe.entity.Game;
+import com.svi.tictactoe.domain.Game;
 import com.svi.tictactoe.enums.CellValue;
 import org.springframework.stereotype.Component;
 

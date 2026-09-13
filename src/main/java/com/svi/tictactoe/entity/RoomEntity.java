@@ -1,29 +1,37 @@
 package com.svi.tictactoe.entity;
 
-import com.svi.tictactoe.enums.RoomStatus;
+import org.springframework.data.cassandra.core.mapping.Column;
+import org.springframework.data.cassandra.core.mapping.PrimaryKey;
+import org.springframework.data.cassandra.core.mapping.Table;
 
 import java.time.Instant;
 import java.util.UUID;
 
-public class Room {
+@Table("rooms_by_code")
+public class RoomEntity {
 
+    @PrimaryKey("room_code")
     private String roomCode;
+
+    @Column("owner_player_id")
     private UUID ownerPlayerId;
+
+    @Column("guest_player_id")
     private UUID guestPlayerId;
+
+    @Column("current_game_id")
     private UUID currentGameId;
-    private RoomStatus status;
+
+    @Column("status")
+    private String status;
+
+    @Column("created_at")
     private Instant createdAt;
+
+    @Column("updated_at")
     private Instant updatedAt;
 
-    public Room() {
-    }
-
-    public Room(String roomCode, UUID ownerPlayerId) {
-        this.roomCode = roomCode;
-        this.ownerPlayerId = ownerPlayerId;
-        this.status = RoomStatus.WAITING;
-        this.createdAt = Instant.now();
-        this.updatedAt = this.createdAt;
+    public RoomEntity() {
     }
 
     public String getRoomCode() {
@@ -58,11 +66,11 @@ public class Room {
         this.currentGameId = currentGameId;
     }
 
-    public RoomStatus getStatus() {
+    public String getStatus() {
         return status;
     }
 
-    public void setStatus(RoomStatus status) {
+    public void setStatus(String status) {
         this.status = status;
     }
 
