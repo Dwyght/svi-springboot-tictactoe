@@ -9,6 +9,8 @@ import com.svi.tictactoe.entity.LeaderboardKey;
 import com.svi.tictactoe.mapper.LeaderboardMapper;
 import com.svi.tictactoe.repository.LeaderboardRepository;
 import com.svi.tictactoe.service.LeaderboardService;
+import com.svi.tictactoe.event.LeaderboardChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -19,10 +21,16 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
     private final LeaderboardRepository leaderboardRepository;
     private final LeaderboardMapper leaderboardMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public LeaderboardServiceImpl(LeaderboardRepository leaderboardRepository, LeaderboardMapper leaderboardMapper) {
+    public LeaderboardServiceImpl(
+            LeaderboardRepository leaderboardRepository,
+            LeaderboardMapper leaderboardMapper,
+            ApplicationEventPublisher eventPublisher
+    ) {
         this.leaderboardRepository = leaderboardRepository;
         this.leaderboardMapper = leaderboardMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -39,22 +47,39 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
     @Override
     public void updatePlayer(Player player) {
-        removeExistingEntry(player);
+        updatePlayers(player);
+    }
 
-        long scoreScaled = calculateScaledScore(player);
-        LeaderboardKey key = new LeaderboardKey();
-        key.setLeaderboardKey(LeaderboardConstants.GLOBAL_KEY);
-        key.setScoreScaled(scoreScaled);
-        key.setGamesPlayed(player.getGamesPlayed());
-        key.setWins(player.getWins());
-        key.setPlayerId(player.getPlayerId());
+    @Override
+    public void updatePlayers(Player... players) {
 
-        LeaderboardEntryEntity entity = new LeaderboardEntryEntity();
-        entity.setKey(key);
-        entity.setPlayerName(player.getName());
-        entity.setLosses(player.getLosses());
-        entity.setDraws(player.getDraws());
-        leaderboardRepository.save(entity);
+        for (Player player : players) {
+            removeExistingEntry(player);
+
+            long scoreScaled = calculateScaledScore(player);
+
+            LeaderboardKey key = new LeaderboardKey();
+            key.setLeaderboardKey(LeaderboardConstants.GLOBAL_KEY);
+            key.setScoreScaled(scoreScaled);
+            key.setGamesPlayed(player.getGamesPlayed());
+            key.setWins(player.getWins());
+            key.setPlayerId(player.getPlayerId());
+
+            LeaderboardEntryEntity entity = new LeaderboardEntryEntity();
+
+            entity.setKey(key);
+            entity.setPlayerName(player.getName());
+            entity.setLosses(player.getLosses());
+            entity.setDraws(player.getDraws());
+
+            leaderboardRepository.save(entity);
+        }
+
+        eventPublisher.publishEvent(
+                new LeaderboardChangedEvent(
+                        getLeaderboard()
+                )
+        );
     }
 
     private void removeExistingEntry(Player player) {

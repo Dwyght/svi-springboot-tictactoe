@@ -5,6 +5,7 @@ import com.svi.tictactoe.domain.Player;
 import com.svi.tictactoe.domain.Room;
 import com.svi.tictactoe.dto.request.game.MakeMoveRequest;
 import com.svi.tictactoe.dto.response.game.GameResponse;
+import com.svi.tictactoe.dto.response.room.RoomResponse;
 import com.svi.tictactoe.engine.GameEngine;
 import com.svi.tictactoe.entity.GameEntity;
 import com.svi.tictactoe.entity.PlayerEntity;
@@ -25,6 +26,10 @@ import com.svi.tictactoe.repository.PlayerRepository;
 import com.svi.tictactoe.repository.RoomRepository;
 import com.svi.tictactoe.service.GameService;
 import com.svi.tictactoe.service.LeaderboardService;
+import com.svi.tictactoe.event.GameChangedEvent;
+import com.svi.tictactoe.event.RoomChangedEvent;
+import com.svi.tictactoe.mapper.RoomMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -44,6 +49,8 @@ public class GameServiceImpl implements GameService {
     private final PlayerPersistenceMapper playerPersistenceMapper;
     private final RoomPersistenceMapper roomPersistenceMapper;
     private final LeaderboardService leaderboardService;
+    private final RoomMapper roomMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     private final ConcurrentMap<UUID, Object> gameLocks = new ConcurrentHashMap<>();
 
@@ -56,7 +63,9 @@ public class GameServiceImpl implements GameService {
             GamePersistenceMapper gamePersistenceMapper,
             PlayerPersistenceMapper playerPersistenceMapper,
             RoomPersistenceMapper roomPersistenceMapper,
-            LeaderboardService leaderboardService
+            LeaderboardService leaderboardService,
+            RoomMapper roomMapper,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.gameRepository = gameRepository;
         this.playerRepository = playerRepository;
@@ -67,6 +76,8 @@ public class GameServiceImpl implements GameService {
         this.playerPersistenceMapper = playerPersistenceMapper;
         this.roomPersistenceMapper = roomPersistenceMapper;
         this.leaderboardService = leaderboardService;
+        this.roomMapper = roomMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -94,7 +105,8 @@ public class GameServiceImpl implements GameService {
             getPlayerSymbol(game, forfeitingPlayerId);
             UUID winnerId = game.getPlayerXId().equals(forfeitingPlayerId) ? game.getPlayerOId() : game.getPlayerXId();
             finishWithForfeit(game, winnerId);
-            gameRepository.save(gamePersistenceMapper.toEntity(game));
+            GameEntity savedEntity = gameRepository.save(gamePersistenceMapper.toEntity(game));
+            publishGameChanged(savedEntity);
         }
     }
 
@@ -117,8 +129,7 @@ public class GameServiceImpl implements GameService {
         }
 
         GameEntity savedEntity = gameRepository.save(gamePersistenceMapper.toEntity(game));
-        Game savedGame = gamePersistenceMapper.toDomain(savedEntity);
-        return gameMapper.toResponse(savedGame);
+        return publishGameChanged(savedEntity);
     }
 
     private Game findGame(UUID gameId) {
@@ -188,6 +199,7 @@ public class GameServiceImpl implements GameService {
         loser.setGamesPlayed(loser.getGamesPlayed() + 1);
         savePlayer(winner);
         savePlayer(loser);
+        leaderboardService.updatePlayers(winner, loser);
     }
 
     private void updateDrawStatistics(Game game) {
@@ -200,6 +212,8 @@ public class GameServiceImpl implements GameService {
 
         savePlayer(playerX);
         savePlayer(playerO);
+        leaderboardService.updatePlayers(playerX, playerO);
+
     }
 
     private Player findPlayer(UUID playerId) {
@@ -211,17 +225,20 @@ public class GameServiceImpl implements GameService {
 
     private void savePlayer(Player player) {
         playerRepository.save(playerPersistenceMapper.toEntity(player));
-        leaderboardService.updatePlayer(player);
     }
 
     private void updateRoomAfterFinishedGame(String roomCode) {
-        RoomEntity entity = roomRepository.findById(roomCode).orElseThrow(() ->
-                        new ResourceNotFoundException(ErrorMessage.ROOM_NOT_FOUND.format(roomCode)));
+        RoomEntity entity = roomRepository
+                .findById(roomCode)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessage.ROOM_NOT_FOUND.format(roomCode)));
 
         Room room = roomPersistenceMapper.toDomain(entity);
         room.setStatus(RoomStatus.GAME_FINISHED);
         room.setUpdatedAt(Instant.now());
-        roomRepository.save(roomPersistenceMapper.toEntity(room));
+        RoomEntity savedEntity = roomRepository.save(roomPersistenceMapper.toEntity(room));
+        Room savedRoom = roomPersistenceMapper.toDomain(savedEntity);
+        RoomResponse response = roomMapper.toResponse(savedRoom);
+        eventPublisher.publishEvent(new RoomChangedEvent(response));
     }
 
     private void finishWithForfeit(Game game, UUID winnerId) {
@@ -232,5 +249,12 @@ public class GameServiceImpl implements GameService {
         game.setUpdatedAt(Instant.now());
         game.setEndedAt(Instant.now());
         updateWinLossStatistics(game, winnerId);
+    }
+
+    private GameResponse publishGameChanged(GameEntity entity) {
+        Game game = gamePersistenceMapper.toDomain(entity);
+        GameResponse response = gameMapper.toResponse(game);
+        eventPublisher.publishEvent(new GameChangedEvent(response));
+        return response;
     }
 }

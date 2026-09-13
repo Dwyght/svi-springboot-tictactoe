@@ -23,6 +23,8 @@ import com.svi.tictactoe.repository.PlayerRepository;
 import com.svi.tictactoe.repository.RoomRepository;
 import com.svi.tictactoe.service.GameService;
 import com.svi.tictactoe.service.RoomService;
+import com.svi.tictactoe.event.RoomChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 
 import org.springframework.stereotype.Service;
 
@@ -44,6 +46,7 @@ public class RoomServiceImpl implements RoomService {
     private final GameService gameService;
 
     private final SecureRandom secureRandom = new SecureRandom();
+    private final ApplicationEventPublisher eventPublisher;
 
     public RoomServiceImpl(
             RoomRepository roomRepository,
@@ -53,7 +56,8 @@ public class RoomServiceImpl implements RoomService {
             RoomMapper roomMapper,
             RoomPersistenceMapper roomPersistenceMapper,
             GamePersistenceMapper gamePersistenceMapper,
-            GameService gameService
+            GameService gameService,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.roomRepository = roomRepository;
         this.playerRepository = playerRepository;
@@ -63,6 +67,7 @@ public class RoomServiceImpl implements RoomService {
         this.roomPersistenceMapper = roomPersistenceMapper;
         this.gamePersistenceMapper = gamePersistenceMapper;
         this.gameService = gameService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -81,8 +86,7 @@ public class RoomServiceImpl implements RoomService {
         activeRoom.setPlayerId(ownerPlayerId);
         activeRoom.setRoomCode(roomCode);
         activeRoomRepository.save(activeRoom);
-        Room savedRoom = roomPersistenceMapper.toDomain(savedEntity);
-        return roomMapper.toResponse(savedRoom);
+        return publishRoomChanged(savedEntity);
     }
 
     @Override
@@ -117,8 +121,7 @@ public class RoomServiceImpl implements RoomService {
         activeRoom.setPlayerId(guestPlayerId);
         activeRoom.setRoomCode(roomCode);
         activeRoomRepository.save(activeRoom);
-        Room savedRoom = roomPersistenceMapper.toDomain(savedRoomEntity);
-        return roomMapper.toResponse(savedRoom);
+        return publishRoomChanged(savedRoomEntity);
     }
 
     @Override
@@ -136,8 +139,7 @@ public class RoomServiceImpl implements RoomService {
         room.setUpdatedAt(Instant.now());
         RoomEntity savedEntity = roomRepository.save(roomPersistenceMapper.toEntity(room));
         removePlayersFromActiveRoom(room);
-        Room savedRoom = roomPersistenceMapper.toDomain(savedEntity);
-        return roomMapper.toResponse(savedRoom);
+        return publishRoomChanged(savedEntity);
     }
 
     @Override
@@ -159,8 +161,7 @@ public class RoomServiceImpl implements RoomService {
         room.setStatus(RoomStatus.IN_GAME);
         room.setUpdatedAt(Instant.now());
         RoomEntity savedEntity = roomRepository.save(roomPersistenceMapper.toEntity(room));
-        Room savedRoom = roomPersistenceMapper.toDomain(savedEntity);
-        return roomMapper.toResponse(savedRoom);
+        return publishRoomChanged(savedEntity);
     }
 
     private void validatePlayerExists(UUID playerId) {
@@ -234,5 +235,12 @@ public class RoomServiceImpl implements RoomService {
         if (room.getStatus() != RoomStatus.GAME_FINISHED || room.getGuestPlayerId() == null || room.getCurrentGameId() == null) {
             throw new IllegalGameStateException(ErrorMessage.REMATCH_NOT_AVAILABLE.format(room.getRoomCode()));
         }
+    }
+
+    private RoomResponse publishRoomChanged(RoomEntity entity) {
+        Room room = roomPersistenceMapper.toDomain(entity);
+        RoomResponse response = roomMapper.toResponse(room);
+        eventPublisher.publishEvent(new RoomChangedEvent(response));
+        return response;
     }
 }

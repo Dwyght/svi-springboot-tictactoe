@@ -7,4 +7,5 @@ public interface LeaderboardService {
 
     LeaderboardResponse getLeaderboard();
     void updatePlayer(Player player);
+    void updatePlayers(Player... players);
 }
