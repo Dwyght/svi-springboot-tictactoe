@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 
 public record CreatePlayerRequest(
         @NotBlank
-        @Size(max = 30)
+        @Size(max = 10)
         String name
         ) {
 }
