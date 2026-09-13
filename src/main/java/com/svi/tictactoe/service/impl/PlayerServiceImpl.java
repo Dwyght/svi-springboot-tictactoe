@@ -9,6 +9,7 @@ import com.svi.tictactoe.exception.ResourceNotFoundException;
 import com.svi.tictactoe.mapper.PlayerMapper;
 import com.svi.tictactoe.mapper.persistence.PlayerPersistenceMapper;
 import com.svi.tictactoe.repository.PlayerRepository;
+import com.svi.tictactoe.service.LeaderboardService;
 import com.svi.tictactoe.service.PlayerService;
 import org.springframework.stereotype.Service;
 
@@ -20,11 +21,13 @@ public class PlayerServiceImpl implements PlayerService {
     private final PlayerRepository playerRepository;
     private final PlayerMapper playerMapper;
     private final PlayerPersistenceMapper playerPersistenceMapper;
+    private final LeaderboardService leaderboardService;
 
-    public PlayerServiceImpl(PlayerRepository playerRepository, PlayerMapper playerMapper, PlayerPersistenceMapper playerPersistenceMapper) {
+    public PlayerServiceImpl(PlayerRepository playerRepository, PlayerMapper playerMapper, PlayerPersistenceMapper playerPersistenceMapper, LeaderboardService leaderboardService) {
         this.playerRepository = playerRepository;
         this.playerMapper = playerMapper;
         this.playerPersistenceMapper = playerPersistenceMapper;
+        this.leaderboardService = leaderboardService;
     }
 
     @Override
@@ -35,6 +38,7 @@ public class PlayerServiceImpl implements PlayerService {
         PlayerEntity entity = playerPersistenceMapper.toEntity(player);
         PlayerEntity savedEntity = playerRepository.save(entity);
         Player savedPlayer = playerPersistenceMapper.toDomain(savedEntity);
+        leaderboardService.updatePlayer(savedPlayer);
 
         return playerMapper.toResponse(savedPlayer);
     }

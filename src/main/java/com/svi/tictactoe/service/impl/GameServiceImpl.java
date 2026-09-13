@@ -24,6 +24,7 @@ import com.svi.tictactoe.repository.GameRepository;
 import com.svi.tictactoe.repository.PlayerRepository;
 import com.svi.tictactoe.repository.RoomRepository;
 import com.svi.tictactoe.service.GameService;
+import com.svi.tictactoe.service.LeaderboardService;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -42,6 +43,7 @@ public class GameServiceImpl implements GameService {
     private final GamePersistenceMapper gamePersistenceMapper;
     private final PlayerPersistenceMapper playerPersistenceMapper;
     private final RoomPersistenceMapper roomPersistenceMapper;
+    private final LeaderboardService leaderboardService;
 
     private final ConcurrentMap<UUID, Object> gameLocks = new ConcurrentHashMap<>();
 
@@ -53,7 +55,8 @@ public class GameServiceImpl implements GameService {
             GameMapper gameMapper,
             GamePersistenceMapper gamePersistenceMapper,
             PlayerPersistenceMapper playerPersistenceMapper,
-            RoomPersistenceMapper roomPersistenceMapper
+            RoomPersistenceMapper roomPersistenceMapper,
+
     ) {
         this.gameRepository = gameRepository;
         this.playerRepository = playerRepository;
@@ -74,7 +77,8 @@ public class GameServiceImpl implements GameService {
     @Override
     public GameResponse makeMove(UUID gameId, MakeMoveRequest request) {
         Object lock = gameLocks.computeIfAbsent(gameId, ignored -> new Object());
-        synchronized (lock) {return processMove(gameId, request);
+        synchronized (lock) {
+            return processMove(gameId, request);
         }
     }
 
@@ -191,6 +195,7 @@ public class GameServiceImpl implements GameService {
 
     private void savePlayer(Player player) {
         playerRepository.save(playerPersistenceMapper.toEntity(player));
+        leaderboardService.updatePlayer(player);
     }
 
     private void updateRoomAfterFinishedGame(String roomCode) {

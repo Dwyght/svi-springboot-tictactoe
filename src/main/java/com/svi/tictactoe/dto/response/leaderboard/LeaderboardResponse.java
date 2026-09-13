@@ -1,4 +1,8 @@
 package com.svi.tictactoe.dto.response.leaderboard;
 
-public class LeaderboardResponse {
+import java.util.List;
+
+public record LeaderboardResponse(
+        List<LeaderboardEntryResponse> entries
+) {
 }

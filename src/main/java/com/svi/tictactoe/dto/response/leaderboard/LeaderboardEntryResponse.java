@@ -1,4 +1,15 @@
 package com.svi.tictactoe.dto.response.leaderboard;
 
-public class LeaderboardEntryResponse {
+import java.util.UUID;
+
+public record LeaderboardEntryResponse(
+        int rank,
+        UUID playerId,
+        String playerName,
+        int wins,
+        int losses,
+        int draws,
+        int gamesPlayed,
+        double score
+) {
 }
