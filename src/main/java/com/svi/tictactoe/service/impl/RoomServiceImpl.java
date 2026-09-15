@@ -5,7 +5,7 @@ import com.svi.tictactoe.domain.Game;
 import com.svi.tictactoe.domain.Room;
 import com.svi.tictactoe.dto.request.room.CreateRoomRequest;
 import com.svi.tictactoe.dto.request.room.JoinRoomRequest;
-import com.svi.tictactoe.dto.request.game.CreateRematchGameRequest;
+import com.svi.tictactoe.dto.request.game.CreateGameRequest;
 import com.svi.tictactoe.dto.response.room.RoomResponse;
 import com.svi.tictactoe.entity.ActiveRoomEntity;
 import com.svi.tictactoe.entity.GameEntity;
@@ -107,11 +107,8 @@ public class RoomServiceImpl implements RoomService {
         Room room = roomPersistenceMapper.toDomain(roomEntity);
         validateJoin(room, guestPlayerId);
 
-        Game game = new Game(UUID.randomUUID(), room.getRoomCode(), room.getOwnerPlayerId(), guestPlayerId);
-        GameEntity gameEntity = gamePersistenceMapper.toEntity(game);
-        gameRepository.save(gameEntity);
-
         room.setGuestPlayerId(guestPlayerId);
+        Game game = createGameForRoom(room);
         room.setCurrentGameId(game.getGameId());
         room.setStatus(RoomStatus.IN_GAME);
         room.setUpdatedAt(Instant.now());
@@ -143,25 +140,29 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public RoomResponse createRematchGame(String roomCode, CreateRematchGameRequest request) {
+    public RoomResponse createGame(String roomCode, CreateGameRequest request) {
         UUID playerId = request.playerId();
         RoomEntity entity = findRoomEntity(roomCode);
         Room room = roomPersistenceMapper.toDomain(entity);
         validateRematch(room, playerId);
 
+        Game game = createGameForRoom(room);
+        room.setCurrentGameId(game.getGameId());
+        room.setStatus(RoomStatus.IN_GAME);
+        room.setUpdatedAt(Instant.now());
+        RoomEntity savedEntity = roomRepository.save(roomPersistenceMapper.toEntity(room));
+        return publishRoomChanged(savedEntity);
+    }
+
+    private Game createGameForRoom(Room room) {
         Game game = new Game(
                 UUID.randomUUID(),
                 room.getRoomCode(),
                 room.getOwnerPlayerId(),
                 room.getGuestPlayerId()
         );
-
-        gameRepository.save(gamePersistenceMapper.toEntity(game));
-        room.setCurrentGameId(game.getGameId());
-        room.setStatus(RoomStatus.IN_GAME);
-        room.setUpdatedAt(Instant.now());
-        RoomEntity savedEntity = roomRepository.save(roomPersistenceMapper.toEntity(room));
-        return publishRoomChanged(savedEntity);
+        GameEntity savedEntity = gameRepository.save(gamePersistenceMapper.toEntity(game));
+        return gamePersistenceMapper.toDomain(savedEntity);
     }
 
     private void validatePlayerExists(UUID playerId) {

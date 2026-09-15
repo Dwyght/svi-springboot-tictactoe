@@ -1,6 +1,6 @@
 package com.svi.tictactoe.controller;
 
-import com.svi.tictactoe.dto.request.game.CreateRematchGameRequest;
+import com.svi.tictactoe.dto.request.game.CreateGameRequest;
 import com.svi.tictactoe.dto.request.room.CreateRoomRequest;
 import com.svi.tictactoe.dto.request.room.JoinRoomRequest;
 import com.svi.tictactoe.dto.response.room.RoomResponse;
@@ -43,7 +43,7 @@ public class RoomController {
     }
 
     @PostMapping("/{roomCode}/games")
-    public ResponseEntity<RoomResponse> createRematchGame(@PathVariable String roomCode, @Valid @RequestBody CreateRematchGameRequest request) {
-        return ResponseEntity.ok(roomService.createRematchGame(roomCode, request));
+    public ResponseEntity<RoomResponse> createGame(@PathVariable String roomCode, @Valid @RequestBody CreateGameRequest request) {
+        return ResponseEntity.ok(roomService.createGame(roomCode, request));
     }
 }
