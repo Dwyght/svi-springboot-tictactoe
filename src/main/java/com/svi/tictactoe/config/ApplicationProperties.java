@@ -9,8 +9,7 @@ import java.util.List;
 @ConfigurationProperties(prefix = "app")
 public class ApplicationProperties {
 
-    private List<String> allowedOriginPatterns =
-            List.of("http://localhost:*");
+    private List<String> allowedOriginPatterns;
 
     public List<String> getAllowedOriginPatterns() {
         return allowedOriginPatterns;
