@@ -12,9 +12,18 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Converts games between domain and Cassandra persistence representations.
+ */
 @Component
 public class GamePersistenceMapper {
 
+    /**
+     * Converts a game domain object into a Cassandra entity with a flattened board.
+     *
+     * @param game the game domain object
+     * @return the game entity
+     */
     public GameEntity toEntity(Game game) {
         GameEntity entity = new GameEntity();
 
@@ -37,6 +46,12 @@ public class GamePersistenceMapper {
         return entity;
     }
 
+    /**
+     * Converts a Cassandra game entity into a domain object with a two-dimensional board.
+     *
+     * @param entity the game entity
+     * @return the game domain object
+     */
     public Game toDomain(GameEntity entity) {
         Game game = new Game();
 

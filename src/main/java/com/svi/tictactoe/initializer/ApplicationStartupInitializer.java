@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * Validates at startup that the configured Cassandra keyspace contains every table required by the application.
+ */
 @Component
 public class ApplicationStartupInitializer implements ApplicationRunner {
 
@@ -30,6 +33,12 @@ public class ApplicationStartupInitializer implements ApplicationRunner {
         this.session = session;
     }
 
+    /**
+     * Checks the Cassandra keyspace and required table metadata before the application accepts traffic.
+     *
+     * @param args the application startup arguments
+     * @throws IllegalStateException if the keyspace is unavailable or a required table is missing
+     */
     @Override
     public void run(@NonNull ApplicationArguments args) {
 

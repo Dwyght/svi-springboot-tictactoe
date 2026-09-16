@@ -5,9 +5,18 @@ import com.svi.tictactoe.entity.RoomEntity;
 import com.svi.tictactoe.enums.RoomStatus;
 import org.springframework.stereotype.Component;
 
+/**
+ * Converts rooms between domain and Cassandra persistence representations.
+ */
 @Component
 public class RoomPersistenceMapper {
 
+    /**
+     * Converts a room domain object into a Cassandra entity.
+     *
+     * @param room the room domain object
+     * @return the room entity
+     */
     public RoomEntity toEntity(Room room) {
         RoomEntity entity = new RoomEntity();
 
@@ -24,6 +33,12 @@ public class RoomPersistenceMapper {
         return entity;
     }
 
+    /**
+     * Converts a Cassandra room entity into a domain object.
+     *
+     * @param entity the room entity
+     * @return the room domain object
+     */
     public Room toDomain(RoomEntity entity) {
         Room room = new Room();
 

@@ -5,9 +5,18 @@ import com.svi.tictactoe.domain.Game;
 import com.svi.tictactoe.enums.CellValue;
 import org.springframework.stereotype.Component;
 
+/**
+ * Maps game domain objects to API response models.
+ */
 @Component
 public class GameMapper {
 
+    /**
+     * Creates an API response from a game while protecting its mutable board data.
+     *
+     * @param game the game domain object
+     * @return the game response
+     */
     public GameResponse toResponse(Game game) {
         return new GameResponse(
                 game.getGameId(),
