@@ -1,14 +1,12 @@
 package com.svi.tictactoe.service.impl;
 
 import com.svi.tictactoe.domain.Game;
-import com.svi.tictactoe.domain.Player;
 import com.svi.tictactoe.domain.Room;
 import com.svi.tictactoe.dto.request.game.MakeMoveRequest;
 import com.svi.tictactoe.dto.response.game.GameResponse;
 import com.svi.tictactoe.dto.response.room.RoomResponse;
 import com.svi.tictactoe.engine.GameEngine;
 import com.svi.tictactoe.entity.GameEntity;
-import com.svi.tictactoe.entity.PlayerEntity;
 import com.svi.tictactoe.entity.RoomEntity;
 import com.svi.tictactoe.enums.ErrorMessage;
 import com.svi.tictactoe.enums.GameResult;
@@ -19,13 +17,11 @@ import com.svi.tictactoe.exception.IllegalGameStateException;
 import com.svi.tictactoe.exception.ResourceNotFoundException;
 import com.svi.tictactoe.mapper.GameMapper;
 import com.svi.tictactoe.mapper.persistence.GamePersistenceMapper;
-import com.svi.tictactoe.mapper.persistence.PlayerPersistenceMapper;
 import com.svi.tictactoe.mapper.persistence.RoomPersistenceMapper;
 import com.svi.tictactoe.repository.GameRepository;
-import com.svi.tictactoe.repository.PlayerRepository;
 import com.svi.tictactoe.repository.RoomRepository;
 import com.svi.tictactoe.service.GameService;
-import com.svi.tictactoe.service.LeaderboardService;
+import com.svi.tictactoe.service.PlayerStatisticsService;
 import com.svi.tictactoe.event.GameChangedEvent;
 import com.svi.tictactoe.event.RoomChangedEvent;
 import com.svi.tictactoe.mapper.RoomMapper;
@@ -41,14 +37,12 @@ import java.util.concurrent.ConcurrentMap;
 public class GameServiceImpl implements GameService {
 
     private final GameRepository gameRepository;
-    private final PlayerRepository playerRepository;
     private final RoomRepository roomRepository;
     private final GameEngine gameEngine;
     private final GameMapper gameMapper;
     private final GamePersistenceMapper gamePersistenceMapper;
-    private final PlayerPersistenceMapper playerPersistenceMapper;
     private final RoomPersistenceMapper roomPersistenceMapper;
-    private final LeaderboardService leaderboardService;
+    private final PlayerStatisticsService playerStatisticsService;
     private final RoomMapper roomMapper;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -56,26 +50,22 @@ public class GameServiceImpl implements GameService {
 
     public GameServiceImpl(
             GameRepository gameRepository,
-            PlayerRepository playerRepository,
             RoomRepository roomRepository,
             GameEngine gameEngine,
             GameMapper gameMapper,
             GamePersistenceMapper gamePersistenceMapper,
-            PlayerPersistenceMapper playerPersistenceMapper,
             RoomPersistenceMapper roomPersistenceMapper,
-            LeaderboardService leaderboardService,
+            PlayerStatisticsService playerStatisticsService,
             RoomMapper roomMapper,
             ApplicationEventPublisher eventPublisher
     ) {
         this.gameRepository = gameRepository;
-        this.playerRepository = playerRepository;
         this.roomRepository = roomRepository;
         this.gameEngine = gameEngine;
         this.gameMapper = gameMapper;
         this.gamePersistenceMapper = gamePersistenceMapper;
-        this.playerPersistenceMapper = playerPersistenceMapper;
         this.roomPersistenceMapper = roomPersistenceMapper;
-        this.leaderboardService = leaderboardService;
+        this.playerStatisticsService = playerStatisticsService;
         this.roomMapper = roomMapper;
         this.eventPublisher = eventPublisher;
     }
@@ -166,7 +156,8 @@ public class GameServiceImpl implements GameService {
         game.setWinnerId(winnerId);
         game.setNextTurn(null);
         game.setEndedAt(Instant.now());
-        updateWinLossStatistics(game, winnerId);
+        UUID loserId = game.getPlayerXId().equals(winnerId) ? game.getPlayerOId() : game.getPlayerXId();
+        playerStatisticsService.recordWinLoss(winnerId, loserId);
         updateRoomAfterFinishedGame(game.getRoomCode());
     }
 
@@ -176,55 +167,8 @@ public class GameServiceImpl implements GameService {
         game.setWinnerId(null);
         game.setNextTurn(null);
         game.setEndedAt(Instant.now());
-        updateDrawStatistics(game);
+        playerStatisticsService.recordDraw(game.getPlayerXId(), game.getPlayerOId());
         updateRoomAfterFinishedGame(game.getRoomCode());
-    }
-
-    private void updateWinLossStatistics(Game game, UUID winnerId) {
-        Player playerX = findPlayer(game.getPlayerXId());
-        Player playerO = findPlayer(game.getPlayerOId());
-
-        Player winner;
-        Player loser;
-        if (playerX.getPlayerId().equals(winnerId)) {
-            winner = playerX;
-            loser = playerO;
-        } else {
-            winner = playerO;
-            loser = playerX;
-        }
-        winner.setWins(winner.getWins() + 1);
-        winner.setGamesPlayed(winner.getGamesPlayed() + 1);
-        loser.setLosses(loser.getLosses() + 1);
-        loser.setGamesPlayed(loser.getGamesPlayed() + 1);
-        savePlayer(winner);
-        savePlayer(loser);
-        leaderboardService.updatePlayers(winner, loser);
-    }
-
-    private void updateDrawStatistics(Game game) {
-        Player playerX = findPlayer(game.getPlayerXId());
-        Player playerO = findPlayer(game.getPlayerOId());
-        playerX.setDraws(playerX.getDraws() + 1);
-        playerX.setGamesPlayed(playerX.getGamesPlayed() + 1);
-        playerO.setDraws(playerO.getDraws() + 1);
-        playerO.setGamesPlayed(playerO.getGamesPlayed() + 1);
-
-        savePlayer(playerX);
-        savePlayer(playerO);
-        leaderboardService.updatePlayers(playerX, playerO);
-
-    }
-
-    private Player findPlayer(UUID playerId) {
-
-        PlayerEntity entity = playerRepository.findById(playerId).orElseThrow(() ->
-                        new ResourceNotFoundException(ErrorMessage.PLAYER_NOT_FOUND.format(playerId)));
-        return playerPersistenceMapper.toDomain(entity);
-    }
-
-    private void savePlayer(Player player) {
-        playerRepository.save(playerPersistenceMapper.toEntity(player));
     }
 
     private void updateRoomAfterFinishedGame(String roomCode) {
@@ -248,7 +192,8 @@ public class GameServiceImpl implements GameService {
         game.setNextTurn(null);
         game.setUpdatedAt(Instant.now());
         game.setEndedAt(Instant.now());
-        updateWinLossStatistics(game, winnerId);
+        UUID loserId = game.getPlayerXId().equals(winnerId) ? game.getPlayerOId() : game.getPlayerXId();
+        playerStatisticsService.recordWinLoss(winnerId, loserId);
     }
 
     private GameResponse publishGameChanged(GameEntity entity) {
