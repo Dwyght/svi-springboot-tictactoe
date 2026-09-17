@@ -49,21 +49,15 @@ In IntelliJ, import `pom.xml` as a Maven project and select JDK 25 for the proje
 
 The default connection uses `127.0.0.1:9042`, local datacenter `datacenter1`, and keyspace `batch1_2026_trainees`.
 
-If the keyspace does not already exist, this example creates it for a local, single-node Cassandra instance whose datacenter is named `datacenter1`. Run it in `cqlsh`:
-
-```cql
-CREATE KEYSPACE IF NOT EXISTS batch1_2026_trainees
-WITH replication = {
-    'class': 'NetworkTopologyStrategy',
-    'datacenter1': 1
-};
-```
-
-Use your cluster's actual datacenter name and appropriate replication settings when using another environment. From the repository root, apply the supplied schema to the selected keyspace:
+The supplied [schema.cql](src/main/resources/schema.cql) now performs the complete database setup. It creates the default keyspace when necessary, selects it with `USE`, and creates all required tables. From the repository root, run:
 
 ```text
-cqlsh 127.0.0.1 9042 -k batch1_2026_trainees -f src/main/resources/schema.cql
+cqlsh 127.0.0.1 9042 -f src/main/resources/schema.cql
 ```
+
+Do not pass `-k batch1_2026_trainees` when initializing a new database because `cqlsh` would try to select the keyspace before the script can create it.
+
+The script uses `NetworkTopologyStrategy` with a replication factor of `1` for `datacenter1`, which is appropriate for the default local single-node setup. For another cluster, update the keyspace name, datacenter, replication settings, and `USE` statement in `schema.cql` before running it. Configure `CASSANDRA_KEYSPACE` and `CASSANDRA_LOCAL_DATACENTER` to match. If the keyspace already exists, `CREATE KEYSPACE IF NOT EXISTS` does not modify its existing replication settings.
 
 If `cqlsh` runs in another environment, such as a container, make [schema.cql](src/main/resources/schema.cql) available there and adjust the file path.
 
@@ -77,7 +71,7 @@ The application checks for these tables at startup:
 | `active_room_by_player` | Lookup used to enforce one active room per player |
 | `leaderboard` | Entries ordered by ranking within the `GLOBAL` partition |
 
-Startup validation checks that the keyspace and tables exist; it does not create them or apply the schema automatically.
+The application validates the configured keyspace and required tables at startup. It does not execute `schema.cql` or create database objects automatically, so run the script before starting the service.
 
 ### 3. Configuration
 
@@ -244,22 +238,32 @@ Packages under `src/main/java/com/svi/tictactoe`:
 
 Controllers delegate to service interfaces. Service implementations coordinate domain objects, the game engine, persistence mappers, and repositories; response mappers prepare API results. Both joining and starting a subsequent game share the private `createGameForRoom` helper in `RoomServiceImpl`.
 
+`GameServiceImpl` manages game state transitions and delegates completed-game statistics to `PlayerStatisticsService`. That service increments wins, losses, draws, and games played, persists both affected players, and asks `LeaderboardService` to refresh their leaderboard entries. Leaderboard scoring remains centralized in `LeaderboardServiceImpl`.
+
 ## Testing and packaging
 
 Import [tictactoe.postman_collection.json](src/main/resources/tictactoe.postman_collection.json) into Postman. Its `baseUrl` defaults to `http://localhost:8080`, and request scripts store `playerXId`, `playerOId`, `roomCode`, and `gameId` as collection variables. Follow the game sequence above; run state-dependent error tests when their required room/game state exists.
 
-Run the existing automated test with JDK 25:
+Run the automated test suite with JDK 25:
 
 ```powershell
-.\mvnw.cmd test
+.\mvnw.cmd clean test
 ```
 
-The test suite currently contains a Spring application context-loading test. It requires a reachable Cassandra instance, the configured keyspace, and all required tables. It does not provide automated gameplay unit tests.
+The suite includes pure unit tests for `GameEngine` and `PlayerStatisticsServiceImpl`. These verify move placement, board outcomes, symbol turns, win/loss/draw statistics, player persistence, and leaderboard update delegation without starting Spring or connecting to Cassandra.
+
+To run only the pure unit tests:
+
+```powershell
+.\mvnw.cmd -Dtest=GameEngineTest,PlayerStatisticsServiceImplTest test
+```
+
+The existing `TictactoeApplicationTests.contextLoads` test starts the Spring application context. A full test or package run therefore requires Cassandra to be reachable and the configured keyspace and tables to exist.
 
 Package the application and run the resulting executable JAR:
 
 ```powershell
-.\mvnw.cmd package
+.\mvnw.cmd clean package
 java -jar target/tictactoe-0.0.1-SNAPSHOT.jar
 ```
 
