@@ -1,3 +1,14 @@
+-- Create the Cassandra keyspace used by the Tic-Tac-Toe application.
+CREATE KEYSPACE IF NOT EXISTS batch1_2026_trainees
+    WITH replication = {
+        'class': 'NetworkTopologyStrategy',
+        'datacenter1': 1
+        }
+     AND durable_writes = true;
+
+-- Use this keyspace for all table definitions below.
+USE batch1_2026_trainees;
+
 -- =========================================================
 -- PLAYER
 --
