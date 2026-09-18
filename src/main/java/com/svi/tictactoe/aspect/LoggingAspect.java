@@ -1,47 +1,59 @@
 package com.svi.tictactoe.aspect;
 
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
+
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 /**
- * Logs execution, duration, and outcome details for controller and service method calls.
+ * Logs request, response, duration, and failure details for controller method calls.
  */
 @Aspect
 @Component
 public class LoggingAspect {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LoggingAspect.class);
-
     /**
-     * Wraps controller and service methods to record their execution time and whether they succeed or fail.
+     * Logs controller requests and their outcomes.
      *
-     * @param joinPoint the intercepted method invocation
+     * @param joinPoint the intercepted controller method invocation
      * @return the value returned by the intercepted method
      * @throws Throwable if the intercepted method fails
      */
-    @Around("execution(* com.svi.tictactoe.controller..*(..)) || execution(* com.svi.tictactoe.service..*(..))" )
-    public Object logMethod(ProceedingJoinPoint joinPoint) throws Throwable {
+    @Around("execution(* com.svi.tictactoe.controller..*(..))")
+    public Object logControllerMethod(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String className = signature.getDeclaringType().getSimpleName();
         String methodName = signature.getName();
-        long startTime = System.currentTimeMillis();
-        LOGGER.info("Executing {}.{}", className, methodName);
+        long startTime = System.nanoTime();
+        LOGGER.debug("Request: {}.{} args={}", className, methodName, Arrays.toString(joinPoint.getArgs()));
 
         try {
             Object result = joinPoint.proceed();
-            long duration = System.currentTimeMillis() - startTime;
-            LOGGER.info("Completed {}.{} in {} ms", className, methodName, duration);
+            long duration = getDurationInMilliseconds(startTime);
+            if (result instanceof ResponseEntity<?> response) {
+                LOGGER.debug("Response: {}.{} status={} duration={}ms", className, methodName, response.getStatusCode(), duration);
+            } else {
+                LOGGER.debug("Response: {}.{} duration={}ms", className, methodName, duration);
+            }
+
             return result;
 
         } catch (Exception exception) {
-            long duration = System.currentTimeMillis() - startTime;
-            LOGGER.error("Failed {}.{} after {} ms: {}", className, methodName, duration, exception.getMessage());
+            long duration = getDurationInMilliseconds(startTime);
+            LOGGER.warn("Request failed: {}.{} exception={} message=\"{}\" duration={}ms", className, methodName, exception.getClass().getSimpleName(), exception.getMessage(), duration);
             throw exception;
         }
+    }
+
+    private long getDurationInMilliseconds(long startTime) {
+        return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
     }
 }
