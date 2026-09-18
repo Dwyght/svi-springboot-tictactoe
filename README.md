@@ -124,6 +124,7 @@ All paths below are relative to `/api/v1`. Send request bodies as JSON with `Con
 | POST | `/players` | `{"name":"Alice"}` | `201` with `PlayerResponse` |
 | GET | `/players/{playerId}` | None | `200` with `PlayerResponse` |
 | POST | `/rooms` | `{"ownerPlayerId":"<playerXId>"}` | `201` with `RoomResponse` |
+| GET | `/rooms` | None | `200` with `LobbyResponse` containing joinable rooms, newest first |
 | GET | `/rooms/{roomCode}` | None | `200` with `RoomResponse` |
 | POST | `/rooms/{roomCode}/players` | `{"playerId":"<playerOId>"}` | `200` with `RoomResponse` |
 | DELETE | `/rooms/{roomCode}/players/{playerId}` | None | `200` with the closed `RoomResponse` |
@@ -198,6 +199,7 @@ Connect a STOMP-capable client to `ws://localhost:8080/ws`, then subscribe to th
 | `/topic/rooms/{roomCode}` | Updated `RoomResponse` |
 | `/topic/games/{gameId}` | Updated `GameResponse` |
 | `/topic/leaderboard` | Updated `LeaderboardResponse` |
+| `/topic/lobby` | Updated `LobbyResponse` containing joinable rooms |
 
 Services publish application events, and `RealtimeEventListener` forwards their response payloads through `SimpMessagingTemplate`. Clients receive the response object directly, without the Java event wrapper.
 

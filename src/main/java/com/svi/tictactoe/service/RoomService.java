@@ -4,6 +4,7 @@ import com.svi.tictactoe.dto.request.room.CreateRoomRequest;
 import com.svi.tictactoe.dto.request.room.JoinRoomRequest;
 import com.svi.tictactoe.dto.request.game.CreateGameRequest;
 import com.svi.tictactoe.dto.response.room.RoomResponse;
+import com.svi.tictactoe.dto.response.room.LobbyResponse;
 
 import java.util.UUID;
 
@@ -11,6 +12,13 @@ import java.util.UUID;
  * Defines room lifecycle operations, including joining, leaving, and starting games.
  */
 public interface RoomService {
+
+    /**
+     * Retrieves waiting rooms available to join, newest first.
+     *
+     * @return the current lobby
+     */
+    LobbyResponse getLobby();
 
     /**
      * Creates a waiting room owned by the requested player.

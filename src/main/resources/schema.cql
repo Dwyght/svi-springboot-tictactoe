@@ -20,13 +20,13 @@ USE batch1_2026_trainees;
 -- =========================================================
 
 CREATE TABLE IF NOT EXISTS players_by_id (
- player_id uuid,
- name text,
- wins int,
- losses int,
- draws int,
- games_played int,
- PRIMARY KEY ((player_id))
+    player_id uuid,
+    name text,
+    wins int,
+    losses int,
+    draws int,
+    games_played int,
+    PRIMARY KEY ((player_id))
 );
 
 
@@ -41,15 +41,46 @@ CREATE TABLE IF NOT EXISTS players_by_id (
 -- =========================================================
 
 CREATE TABLE IF NOT EXISTS rooms_by_code (
- room_code text,
- owner_player_id uuid,
- guest_player_id uuid,
- current_game_id uuid,
- status text,
- created_at timestamp,
- updated_at timestamp,
+    room_code text,
+    owner_player_id uuid,
+    guest_player_id uuid,
+    current_game_id uuid,
+    status text,
+    created_at timestamp,
+    updated_at timestamp,
  PRIMARY KEY ((room_code))
 );
+
+-- =========================================================
+-- ROOM LOBBY LOOKUP
+--
+-- Query:
+-- Find joinable rooms ordered by newest first
+--
+-- Partition Key:
+-- status
+--
+-- Clustering order:
+-- 1. Newest room first (created_at DESC)
+-- 2. room_code for uniqueness
+--
+-- This table is a denormalized copy of rooms_by_code, kept in
+-- sync by the service layer on every write. Rows are deleted
+-- here once a room leaves the WAITING status (or add more
+-- partition values later if the lobby should also list
+-- IN_GAME / GAME_FINISHED rooms).
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS rooms_by_status (
+    status text,
+    created_at timestamp,
+    room_code text,
+    owner_player_id uuid,
+    guest_player_id uuid,
+    current_game_id uuid,
+    updated_at timestamp,
+    PRIMARY KEY ((status), created_at, room_code)
+) WITH CLUSTERING ORDER BY (created_at DESC);
 
 
 -- =========================================================
@@ -69,20 +100,20 @@ CREATE TABLE IF NOT EXISTS rooms_by_code (
 -- =========================================================
 
 CREATE TABLE IF NOT EXISTS games_by_id (
-game_id uuid,
-room_code text,
-player_x_id uuid,
-player_o_id uuid,
-board list<text>,
-next_turn text,
-status text,
-result text,
-winner_id uuid,
-move_count int,
-created_at timestamp,
-updated_at timestamp,
-ended_at timestamp,
-PRIMARY KEY ((game_id))
+    game_id uuid,
+    room_code text,
+    player_x_id uuid,
+    player_o_id uuid,
+    board list<text>,
+    next_turn text,
+    status text,
+    result text,
+    winner_id uuid,
+    move_count int,
+    created_at timestamp,
+    updated_at timestamp,
+    ended_at timestamp,
+    PRIMARY KEY ((game_id))
 );
 
 
@@ -97,9 +128,9 @@ PRIMARY KEY ((game_id))
 -- =========================================================
 
 CREATE TABLE IF NOT EXISTS active_room_by_player (
-         player_id uuid,
-         room_code text,
-         PRIMARY KEY ((player_id))
+    player_id uuid,
+    room_code text,
+    PRIMARY KEY ((player_id))
 );
 
 

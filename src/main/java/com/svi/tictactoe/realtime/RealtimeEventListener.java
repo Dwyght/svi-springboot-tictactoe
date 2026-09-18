@@ -3,13 +3,14 @@ package com.svi.tictactoe.realtime;
 import com.svi.tictactoe.constant.RealtimeTopic;
 import com.svi.tictactoe.event.GameChangedEvent;
 import com.svi.tictactoe.event.LeaderboardChangedEvent;
+import com.svi.tictactoe.event.LobbyChangedEvent;
 import com.svi.tictactoe.event.RoomChangedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Translates room, game, and leaderboard application events into STOMP topic broadcasts.
+ * Translates room, game, leaderboard, and lobby application events into STOMP topic broadcasts.
  */
 @Component
 public class RealtimeEventListener {
@@ -48,5 +49,15 @@ public class RealtimeEventListener {
     @EventListener
     public void handleLeaderboardChanged(LeaderboardChangedEvent event) {
         messagingTemplate.convertAndSend(RealtimeTopic.LEADERBOARD, event.leaderboard());
+    }
+
+    /**
+     * Broadcasts the updated list of joinable rooms to lobby subscribers.
+     *
+     * @param event the lobby change event
+     */
+    @EventListener
+    public void handleLobbyChanged(LobbyChangedEvent event) {
+        messagingTemplate.convertAndSend(RealtimeTopic.LOBBY, event.lobby());
     }
 }

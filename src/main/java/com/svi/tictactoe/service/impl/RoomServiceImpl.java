@@ -1,5 +1,6 @@
 package com.svi.tictactoe.service.impl;
 
+import com.datastax.oss.driver.api.core.cql.BatchType;
 import com.svi.tictactoe.constant.GameConstants;
 import com.svi.tictactoe.domain.Game;
 import com.svi.tictactoe.domain.Room;
@@ -7,6 +8,7 @@ import com.svi.tictactoe.dto.request.room.CreateRoomRequest;
 import com.svi.tictactoe.dto.request.room.JoinRoomRequest;
 import com.svi.tictactoe.dto.request.game.CreateGameRequest;
 import com.svi.tictactoe.dto.response.room.RoomResponse;
+import com.svi.tictactoe.dto.response.room.LobbyResponse;
 import com.svi.tictactoe.entity.ActiveRoomEntity;
 import com.svi.tictactoe.entity.GameEntity;
 import com.svi.tictactoe.entity.RoomEntity;
@@ -21,21 +23,28 @@ import com.svi.tictactoe.repository.ActiveRoomRepository;
 import com.svi.tictactoe.repository.GameRepository;
 import com.svi.tictactoe.repository.PlayerRepository;
 import com.svi.tictactoe.repository.RoomRepository;
+import com.svi.tictactoe.repository.RoomStatusRepository;
 import com.svi.tictactoe.service.GameService;
 import com.svi.tictactoe.service.RoomService;
 import com.svi.tictactoe.event.RoomChangedEvent;
+import com.svi.tictactoe.event.LobbyChangedEvent;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.cassandra.core.CassandraBatchOperations;
+import org.springframework.data.cassandra.core.CassandraOperations;
 
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
+    private final RoomStatusRepository roomStatusRepository;
+    private final CassandraOperations cassandraOperations;
     private final PlayerRepository playerRepository;
     private final GameRepository gameRepository;
     private final ActiveRoomRepository activeRoomRepository;
@@ -50,6 +59,8 @@ public class RoomServiceImpl implements RoomService {
 
     public RoomServiceImpl(
             RoomRepository roomRepository,
+            RoomStatusRepository roomStatusRepository,
+            CassandraOperations cassandraOperations,
             PlayerRepository playerRepository,
             GameRepository gameRepository,
             ActiveRoomRepository activeRoomRepository,
@@ -60,6 +71,8 @@ public class RoomServiceImpl implements RoomService {
             ApplicationEventPublisher eventPublisher
     ) {
         this.roomRepository = roomRepository;
+        this.roomStatusRepository = roomStatusRepository;
+        this.cassandraOperations = cassandraOperations;
         this.playerRepository = playerRepository;
         this.gameRepository = gameRepository;
         this.activeRoomRepository = activeRoomRepository;
@@ -68,6 +81,21 @@ public class RoomServiceImpl implements RoomService {
         this.gamePersistenceMapper = gamePersistenceMapper;
         this.gameService = gameService;
         this.eventPublisher = eventPublisher;
+    }
+
+    /**
+     * Retrieves joinable rooms from the WAITING partition without reordering them.
+     *
+     * @return the current lobby, ordered newest first
+     */
+    @Override
+    public LobbyResponse getLobby() {
+        List<RoomResponse> rooms = roomStatusRepository.findByKeyStatus(RoomStatus.WAITING.name())
+                .stream()
+                .map(roomPersistenceMapper::toDomain)
+                .map(roomMapper::toResponse)
+                .toList();
+        return new LobbyResponse(rooms);
     }
 
     @Override
@@ -80,7 +108,7 @@ public class RoomServiceImpl implements RoomService {
 
         String roomCode = generateUniqueRoomCode();
         Room room = new Room(roomCode, ownerPlayerId);
-        RoomEntity savedEntity = roomRepository.save(roomPersistenceMapper.toEntity(room));
+        RoomEntity savedEntity = syncRoomByStatus(null, room);
 
         ActiveRoomEntity activeRoom = new ActiveRoomEntity();
         activeRoom.setPlayerId(ownerPlayerId);
@@ -112,7 +140,7 @@ public class RoomServiceImpl implements RoomService {
         room.setCurrentGameId(game.getGameId());
         room.setStatus(RoomStatus.IN_GAME);
         room.setUpdatedAt(Instant.now());
-        RoomEntity savedRoomEntity = roomRepository.save(roomPersistenceMapper.toEntity(room));
+        RoomEntity savedRoomEntity = syncRoomByStatus(roomPersistenceMapper.toDomain(roomEntity), room);
 
         ActiveRoomEntity activeRoom = new ActiveRoomEntity();
         activeRoom.setPlayerId(guestPlayerId);
@@ -134,7 +162,7 @@ public class RoomServiceImpl implements RoomService {
 
         room.setStatus(RoomStatus.CLOSED);
         room.setUpdatedAt(Instant.now());
-        RoomEntity savedEntity = roomRepository.save(roomPersistenceMapper.toEntity(room));
+        RoomEntity savedEntity = syncRoomByStatus(roomPersistenceMapper.toDomain(entity), room);
         removePlayersFromActiveRoom(room);
         return publishRoomChanged(savedEntity);
     }
@@ -150,8 +178,22 @@ public class RoomServiceImpl implements RoomService {
         room.setCurrentGameId(game.getGameId());
         room.setStatus(RoomStatus.IN_GAME);
         room.setUpdatedAt(Instant.now());
-        RoomEntity savedEntity = roomRepository.save(roomPersistenceMapper.toEntity(room));
+        RoomEntity savedEntity = syncRoomByStatus(roomPersistenceMapper.toDomain(entity), room);
         return publishRoomChanged(savedEntity);
+    }
+
+    private RoomEntity syncRoomByStatus(Room previousRoom, Room updatedRoom) {
+        RoomEntity entity = roomPersistenceMapper.toEntity(updatedRoom);
+        CassandraBatchOperations batch = cassandraOperations.batchOps(BatchType.LOGGED);
+        batch.insert(entity);
+        if (previousRoom != null && previousRoom.getStatus() == RoomStatus.WAITING) {
+            batch.delete(roomPersistenceMapper.toStatusEntity(previousRoom));
+        }
+        if (updatedRoom.getStatus() == RoomStatus.WAITING) {
+            batch.insert(roomPersistenceMapper.toStatusEntity(updatedRoom));
+        }
+        batch.execute();
+        return entity;
     }
 
     private Game createGameForRoom(Room room) {
@@ -242,6 +284,7 @@ public class RoomServiceImpl implements RoomService {
         Room room = roomPersistenceMapper.toDomain(entity);
         RoomResponse response = roomMapper.toResponse(room);
         eventPublisher.publishEvent(new RoomChangedEvent(response));
+        eventPublisher.publishEvent(new LobbyChangedEvent(getLobby()));
         return response;
     }
 }

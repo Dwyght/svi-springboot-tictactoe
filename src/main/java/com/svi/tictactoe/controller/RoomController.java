@@ -4,6 +4,7 @@ import com.svi.tictactoe.dto.request.game.CreateGameRequest;
 import com.svi.tictactoe.dto.request.room.CreateRoomRequest;
 import com.svi.tictactoe.dto.request.room.JoinRoomRequest;
 import com.svi.tictactoe.dto.response.room.RoomResponse;
+import com.svi.tictactoe.dto.response.room.LobbyResponse;
 import com.svi.tictactoe.service.RoomService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,16 @@ public class RoomController {
 
     public RoomController(RoomService roomService) {
         this.roomService = roomService;
+    }
+
+    /**
+     * Retrieves waiting rooms available to join, newest first.
+     *
+     * @return a response containing the lobby with status 200 OK
+     */
+    @GetMapping
+    public ResponseEntity<LobbyResponse> getLobby() {
+        return ResponseEntity.ok(roomService.getLobby());
     }
 
     /**
