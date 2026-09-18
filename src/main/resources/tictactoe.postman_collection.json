@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "6f7ef1f2-51d7-4fef-9f38-tictactoe-springboot",
     "name": "TicTacToe Spring Boot API",
-    "description": "Postman collection for the Spring Boot Tic-Tac-Toe backend.\n\nRecommended order:\n1. Create Player X\n2. Create Player O\n3. Create Room\n4. Join Room\n5. Play the sample moves\n6. Check Leaderboard\n7. Create Rematch Game\n\nThe collection automatically stores playerXId, playerOId, roomCode, and gameId.",
+    "description": "Postman collection for the Spring Boot Tic-Tac-Toe backend.\n\nRecommended order:\n1. Create Player X\n2. Create Player O\n3. Create Room\n4. Check Lobby\n5. Join Room\n6. Play the sample moves\n7. Check Leaderboard\n8. Create Rematch Game\n\nThe collection automatically stores playerXId, playerOId, roomCode, and gameId.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -223,7 +223,42 @@
           ]
         },
         {
-          "name": "2. Get Room",
+          "name": "2. Get Lobby",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms",
+            "description": "Returns joinable WAITING rooms, newest first. Run after Create Room to verify the newly created room is visible in the lobby."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Response has rooms array\", () => pm.expect(body.rooms).to.be.an(\"array\"));",
+                  "pm.test(\"Created room is listed as WAITING\", () => {",
+                  "  const roomCode = pm.collectionVariables.get(\"roomCode\");",
+                  "  const room = body.rooms.find(item => item.roomCode === roomCode);",
+                  "  pm.expect(room).to.exist;",
+                  "  pm.expect(room.status).to.eql(\"WAITING\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Get Room",
           "request": {
             "method": "GET",
             "header": [
@@ -250,7 +285,7 @@
           ]
         },
         {
-          "name": "3. Join Room as Player O",
+          "name": "4. Join Room as Player O",
           "request": {
             "method": "POST",
             "header": [
@@ -294,7 +329,7 @@
           ]
         },
         {
-          "name": "4. Get Room After Join",
+          "name": "5. Get Room After Join",
           "request": {
             "method": "GET",
             "header": [
@@ -321,7 +356,7 @@
           ]
         },
         {
-          "name": "5. Create Rematch Game",
+          "name": "6. Create Rematch Game",
           "request": {
             "method": "POST",
             "header": [
@@ -365,7 +400,7 @@
           ]
         },
         {
-          "name": "6. Leave Room - Player X",
+          "name": "7. Leave Room - Player X",
           "request": {
             "method": "DELETE",
             "header": [
