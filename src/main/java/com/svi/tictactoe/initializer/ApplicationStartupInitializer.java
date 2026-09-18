@@ -22,6 +22,7 @@ public class ApplicationStartupInitializer implements ApplicationRunner {
     private static final List<String> REQUIRED_TABLES = List.of(
             "players_by_id",
             "rooms_by_code",
+            "rooms_by_status",
             "games_by_id",
             "active_room_by_player",
             "leaderboard"

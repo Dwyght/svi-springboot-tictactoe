@@ -1,5 +1,6 @@
 package com.svi.tictactoe.controller;
 
+import com.svi.tictactoe.constant.GameConstants;
 import com.svi.tictactoe.dto.request.game.CreateGameRequest;
 import com.svi.tictactoe.dto.request.room.CreateRoomRequest;
 import com.svi.tictactoe.dto.request.room.JoinRoomRequest;
@@ -7,6 +8,7 @@ import com.svi.tictactoe.dto.response.room.RoomResponse;
 import com.svi.tictactoe.dto.response.room.LobbyResponse;
 import com.svi.tictactoe.service.RoomService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -57,7 +59,7 @@ public class RoomController {
      * @throws com.svi.tictactoe.exception.ResourceNotFoundException if the room does not exist
      */
     @GetMapping("/{roomCode}")
-    public ResponseEntity<RoomResponse> getRoom(@PathVariable String roomCode) {
+    public ResponseEntity<RoomResponse> getRoom(@PathVariable @Pattern(regexp = GameConstants.ROOM_CODE_PATTERN) String roomCode) {
         return ResponseEntity.ok(roomService.getRoom(roomCode));
     }
 
@@ -71,7 +73,7 @@ public class RoomController {
      * @throws com.svi.tictactoe.exception.IllegalGameStateException if the player or room is not eligible for joining
      */
     @PostMapping("/{roomCode}/players")
-    public ResponseEntity<RoomResponse> joinRoom(@PathVariable String roomCode, @Valid @RequestBody JoinRoomRequest request) {
+    public ResponseEntity<RoomResponse> joinRoom(@PathVariable @Pattern(regexp = GameConstants.ROOM_CODE_PATTERN) String roomCode, @Valid @RequestBody JoinRoomRequest request) {
         return ResponseEntity.ok(roomService.joinRoom(roomCode, request));
     }
 
@@ -85,7 +87,7 @@ public class RoomController {
      * @throws com.svi.tictactoe.exception.IllegalGameStateException if the player is not in the room or the room is already closed
      */
     @DeleteMapping("/{roomCode}/players/{playerId}")
-    public ResponseEntity<RoomResponse> leaveRoom(@PathVariable String roomCode, @PathVariable UUID playerId) {
+    public ResponseEntity<RoomResponse> leaveRoom(@PathVariable @Pattern(regexp = GameConstants.ROOM_CODE_PATTERN) String roomCode, @PathVariable UUID playerId) {
         return ResponseEntity.ok(roomService.leaveRoom(roomCode, playerId));
     }
 
@@ -99,7 +101,7 @@ public class RoomController {
      * @throws com.svi.tictactoe.exception.IllegalGameStateException if the requester is not the owner or the room is not ready
      */
     @PostMapping("/{roomCode}/games")
-    public ResponseEntity<RoomResponse> createGame(@PathVariable String roomCode, @Valid @RequestBody CreateGameRequest request) {
+    public ResponseEntity<RoomResponse> createGame(@PathVariable @Pattern(regexp = GameConstants.ROOM_CODE_PATTERN) String roomCode, @Valid @RequestBody CreateGameRequest request) {
         return ResponseEntity.ok(roomService.createGame(roomCode, request));
     }
 }
